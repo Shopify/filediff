@@ -1,0 +1,8 @@
+{
+  "include": ["index.ts"],
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext"
+  }
+}

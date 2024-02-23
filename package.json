@@ -1,0 +1,34 @@
+{
+  "name": "filediff",
+  "private": true,
+  "description": "Create a filediff comment to compare file size changes",
+  "version": "0.0.1",
+  "main": "dist/index.js",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "ncc build index.ts --minify --license LICENSE",
+    "watch": "ncc build index.ts --watch --minify",
+    "lint": "prettier --check . !dist/index.js",
+    "format": "prettier '.' !dist/index.js --write"
+  },
+  "dependencies": {
+    "@actions/core": "1.10.0",
+    "@actions/exec": "^1.1.1",
+    "@actions/github": "^6.0.0",
+    "globby": "^14.0.1",
+    "pretty-bytes": "^6.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.19",
+    "@types/glob": "^8.1.0",
+    "@vercel/ncc": "^0.38.1",
+    "prettier": "^3.1.0",
+    "typescript": "^5.3.3"
+  },
+  "prettier": {
+    "singleQuote": true,
+    "bracketSpacing": false,
+    "trailingComma": "all"
+  }
+}

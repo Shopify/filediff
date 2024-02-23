@@ -1,0 +1,21 @@
+name: filediff
+description: Create a filediff comment to compare file size changes
+author: Shopify
+inputs:
+  target_branch:
+    description: The target branch to compare the diff against
+    required: true
+  dir_glob:
+    description: The directory glob to compare across branches
+    required: true
+  pre_diff_script:
+    description: Script to run before getting the file diff
+  file_details_open:
+    default: false
+    description: Do not render a collapsible section for the files
+runs:
+  using: node20
+  main: dist/index.js
+branding:
+  icon: package
+  color: blue

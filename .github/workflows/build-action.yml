@@ -1,0 +1,44 @@
+name: Build action
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-action:
+    name: Build GitHub Action
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Setup Node with v20.11.0
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20.11.0
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build action
+        run: npm run build
+
+      - name: Get last commit message
+        id: last-commit
+        run: |
+          echo "message=$(git log -1 --pretty=%s)" >> $GITHUB_OUTPUT
+          echo "author=$(git log -1 --pretty=\"%an <%ae>\")" >> $GITHUB_OUTPUT
+
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_author: ${{ steps.last-commit.outputs.author }}
+          commit_message: ${{ steps.last-commit.outputs.message }}
+          commit_options: '--amend --no-edit'
+          push_options: '--force'
+          skip_fetch: true
