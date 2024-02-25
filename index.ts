@@ -1,11 +1,15 @@
-import {statSync, cpSync, readFileSync} from 'fs';
-import {brotliCompressSync, gzipSync} from 'zlib';
+import * as fs from 'node:fs';
+import * as zlib from 'node:zlib';
+import * as util from 'node:util';
 
 import {getInput, setFailed, info} from '@actions/core';
 import * as github from '@actions/github';
 import {exec} from '@actions/exec';
 import {globby} from 'globby';
 import prettyBytes from 'pretty-bytes';
+
+const gzip = util.promisify(zlib.gzip);
+const brotliCompress = util.promisify(zlib.brotliCompress);
 
 type BranchStats = {
   totalSize: number;
@@ -23,12 +27,12 @@ type BranchStats = {
 const commentHash = '<!-- @alex-page was here -->';
 
 const getFileStats = async (file: string, branchStats: BranchStats) => {
-  const stats = statSync(file);
-  const fileContents = readFileSync(file);
+  const stats = await fs.promises.stat(file);
+  const fileContents = await fs.promises.readFile(file);
 
-  const gzipFile = gzipSync(fileContents);
+  const gzipFile = await gzip(fileContents);
   const gzipSize = Buffer.byteLength(gzipFile);
-  const brotliFile = brotliCompressSync(fileContents);
+  const brotliFile = await brotliCompress(fileContents);
   const brotliSize = Buffer.byteLength(brotliFile);
 
   // Remove the GitHub file path from the repo file path
@@ -52,7 +56,7 @@ const getBranchStats = async (
   info(`[${branch}] copy repo and git checkout `);
   const tempDir = '.filediff';
   const cwd = `../${tempDir}/${branch}`;
-  cpSync('.', cwd, {recursive: true});
+  await fs.promises.cp('.', cwd, {recursive: true});
   await exec('git', ['fetch', 'origin', branch], {cwd});
   await exec('git', ['checkout', branch], {cwd});
 
