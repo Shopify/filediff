@@ -55,9 +55,17 @@ The script to run before generating the filediff comment.
 
 **`file_details_open` (optional, default: false)**
 
-Open the file details when the comment is created
+Open the file details when the comment is created.
+
+**`replace_comment` (optional, default: true)**
+
+Replaces previous filediff comments before creating a new one.
 
 ## Changelog
+
+**`v0.0.2`**
+
+- Added option to `replace_comment`
 
 **`v0.0.1`**
 

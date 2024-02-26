@@ -1,11 +1,15 @@
-import {statSync, cpSync, readFileSync} from 'fs';
-import {brotliCompressSync, gzipSync} from 'zlib';
+import * as fs from 'node:fs';
+import * as zlib from 'node:zlib';
+import * as util from 'node:util';
 
 import {getInput, setFailed, info} from '@actions/core';
 import * as github from '@actions/github';
 import {exec} from '@actions/exec';
 import {globby} from 'globby';
 import prettyBytes from 'pretty-bytes';
+
+const gzip = util.promisify(zlib.gzip);
+const brotliCompress = util.promisify(zlib.brotliCompress);
 
 type BranchStats = {
   totalSize: number;
@@ -23,12 +27,12 @@ type BranchStats = {
 const commentHash = '<!-- @alex-page was here -->';
 
 const getFileStats = async (file: string, branchStats: BranchStats) => {
-  const stats = statSync(file);
-  const fileContents = readFileSync(file);
+  const stats = await fs.promises.stat(file);
+  const fileContents = await fs.promises.readFile(file);
 
-  const gzipFile = gzipSync(fileContents);
+  const gzipFile = await gzip(fileContents);
   const gzipSize = Buffer.byteLength(gzipFile);
-  const brotliFile = brotliCompressSync(fileContents);
+  const brotliFile = await brotliCompress(fileContents);
   const brotliSize = Buffer.byteLength(brotliFile);
 
   // Remove the GitHub file path from the repo file path
@@ -52,7 +56,7 @@ const getBranchStats = async (
   info(`[${branch}] copy repo and git checkout `);
   const tempDir = '.filediff';
   const cwd = `../${tempDir}/${branch}`;
-  cpSync('.', cwd, {recursive: true});
+  await fs.promises.cp('.', cwd, {recursive: true});
   await exec('git', ['fetch', 'origin', branch], {cwd});
   await exec('git', ['checkout', branch], {cwd});
 
@@ -60,8 +64,8 @@ const getBranchStats = async (
     info(`[${branch}] Running ${script}`);
     const commands = script.split('&&').map((cmd) => cmd.trim());
     for (const cmd of commands) {
-      const [cmdName, ...cmdArgs] = cmd.split(' ');
-      await exec(cmdName, cmdArgs, {cwd});
+      const [cmdName, ...cmdArgs] = cmd.split(/\s+/);
+      await exec(cmdName!, cmdArgs, {cwd});
     }
   }
 
@@ -93,18 +97,18 @@ export const getStatComment = (
     added: 0,
   };
 
-  const getDiff = (a, b) => prettyBytes(a - b, {signed: true});
+  const getDiff = (a: number, b: number) => prettyBytes(a - b, {signed: true});
   const totalDiff = {
     size: getDiff(prStats.totalSize, targetStats.totalSize),
     gzip: getDiff(prStats.totalGzip, targetStats.totalGzip),
     brotli: getDiff(prStats.totalBrotli, targetStats.totalBrotli),
   };
 
-  let fileColumns = [];
+  let fileColumns: string[] = [];
   Object.entries(prStats.files).forEach(([filePath, {size, brotli, gzip}]) => {
     const targetFile = targetStats.files[filePath];
 
-    if (targetFile === undefined) {
+    if (!targetFile) {
       // File in PR is not in target branch (added)
       fileTotals.added = fileTotals.added + 1;
       fileColumns.push(
@@ -131,7 +135,8 @@ export const getStatComment = (
     },
   );
 
-  const pluralize = (count, single, plural) => (count === 1 ? single : plural);
+  const pluralize = (count: number, single: string, plural: string) =>
+    count === 1 ? single : plural;
 
   const fChangedText = pluralize(
     fileTotals.changed,
@@ -180,8 +185,7 @@ const run = async () => {
     const dirGlob = getInput('dir_glob', {required: true});
     const script = getInput('pre_diff_script');
     const fileDetailsOpen = getInput('file_details_open');
-
-    // TODO: Check if a comment already exists and remove it
+    const replaceComment = getInput('replace_comment');
 
     const [targetStats, prStats] = await Promise.all([
       getBranchStats(targetBranch, dirGlob, script),
@@ -191,28 +195,30 @@ const run = async () => {
     // No changes found, exit early
     if (targetStats.totalSize === prStats.totalSize) return;
 
+    if (replaceComment === 'true') {
+      // Replace existing filediff comment
+      const comments = await octokit.rest.issues.listComments({
+        owner,
+        repo,
+        issue_number: prNumber,
+      });
+
+      for (let comment of comments.data) {
+        if (comment.body?.startsWith(commentHash)) {
+          await octokit.rest.issues.deleteComment({
+            owner,
+            repo,
+            comment_id: comment.id,
+          });
+        }
+      }
+    }
+
     const commentBody = getStatComment(
       targetStats,
       prStats,
       fileDetailsOpen === 'true',
     );
-
-    // Remove existing filediff comment
-    const comments = await octokit.rest.issues.listComments({
-      owner,
-      repo,
-      issue_number: prNumber,
-    });
-
-    for (let comment of comments.data) {
-      if (comment.body.startsWith('<!-- @alex-page was here -->')) {
-        await octokit.rest.issues.deleteComment({
-          owner,
-          repo,
-          comment_id: comment.id,
-        });
-      }
-    }
 
     await octokit.rest.issues.createComment({
       owner,
@@ -221,7 +227,9 @@ const run = async () => {
       body: commentBody,
     });
   } catch (error) {
-    setFailed(error.message);
+    setFailed(
+      error instanceof Error ? error.message : 'An unexpected error occurred',
+    );
   }
 };
 

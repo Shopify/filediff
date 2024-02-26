@@ -13,6 +13,9 @@ inputs:
   file_details_open:
     default: false
     description: Do not render a collapsible section for the files
+  replace_comment:
+    default: true
+    description: Replaces previous filediff comments
 runs:
   using: node20
   main: dist/index.js
