@@ -14,7 +14,7 @@ inputs:
     default: false
     description: Do not render a collapsible section for the files
   remove_filediff_comment:
-    default: false
+    default: true
     description: Removes previous filediff comments
 runs:
   using: node20

@@ -57,7 +57,7 @@ The script to run before generating the filediff comment.
 
 Open the file details when the comment is created.
 
-**`remove_filediff_comment` (optional, default: false)**
+**`remove_filediff_comment` (optional, default: true)**
 
 Removes previous filediff comments before creating a new one.
 
