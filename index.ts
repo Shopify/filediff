@@ -26,7 +26,11 @@ type BranchStats = {
 
 const commentHash = '<!-- @alex-page was here -->';
 
-const getFileStats = async (file: string, branchStats: BranchStats) => {
+const getFileStats = async (
+  file: string,
+  branch: string,
+  branchStats: BranchStats,
+) => {
   const stats = await fs.promises.stat(file);
   const fileContents = await fs.promises.readFile(file);
 
@@ -36,7 +40,7 @@ const getFileStats = async (file: string, branchStats: BranchStats) => {
   const brotliSize = Buffer.byteLength(brotliFile);
 
   // Remove the GitHub file path from the repo file path
-  const filePath = file.split('/').slice(7).join('/');
+  const filePath = file.split(`${branch}/`).slice(1)[0]!;
 
   branchStats.totalSize += stats.size;
   branchStats.totalGzip += gzipSize;
@@ -69,7 +73,7 @@ const getBranchStats = async (
     }
   }
 
-  const files = await globby(dirGlob, {cwd, absolute: true});
+  const files = await globby(dirGlob.split(','), {cwd, absolute: true});
 
   info(`[${branch}] Getting file stats for ${files.length} files`);
   const branchStats: BranchStats = {
@@ -79,7 +83,9 @@ const getBranchStats = async (
     files: {},
   };
 
-  await Promise.all(files.map((file) => getFileStats(file, branchStats)));
+  await Promise.all(
+    files.map((file) => getFileStats(file, branch, branchStats)),
+  );
 
   info(`[${branch}] Completed file stats`);
 

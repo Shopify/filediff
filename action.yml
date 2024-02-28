@@ -6,7 +6,7 @@ inputs:
     description: The target branch to compare the diff against
     required: true
   dir_glob:
-    description: The directory glob to compare across branches
+    description: A comma seperated list of globs to compare across branches
     required: true
   pre_diff_script:
     description: Script to run before getting the file diff

@@ -30,7 +30,7 @@ jobs:
         with:
           pre_diff_script: npm run build
           target_branch: main
-          dir_glob: packages/**/dist
+          dir_glob: packages/**/dist/**,images/**
 ```
 
 ## Environment Variables
@@ -62,6 +62,11 @@ Open the file details when the comment is created.
 Replaces previous filediff comments before creating a new one.
 
 ## Changelog
+
+**`v0.0.3`**
+
+- Fix issue with comparison file path containing PR branch name
+- Added option for multiple globs seperated by `,`
 
 **`v0.0.2`**
 
