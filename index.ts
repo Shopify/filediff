@@ -144,17 +144,27 @@ export const getStatComment = (
   const pluralize = (count: number, single: string, plural: string) =>
     count === 1 ? single : plural;
 
-  const fChangedText = pluralize(
-    fileTotals.changed,
-    'file changed',
-    'files changed',
-  );
-  const fAddedText = pluralize(fileTotals.added, 'file added', 'files added');
-  const fRemovedText = pluralize(
-    fileTotals.removed,
-    'file removed',
-    'files removed',
-  );
+  const detailsSummaryText = [];
+  if (fileTotals.changed !== 0)
+    detailsSummaryText.push(
+      `${fileTotals.changed} ${pluralize(
+        fileTotals.changed,
+        'file changed',
+        'files changed',
+      )}`,
+    );
+  if (fileTotals.added !== 0)
+    detailsSummaryText.push(
+      `${fileTotals.added} ${pluralize(fileTotals.added, 'file added', 'files added')}`,
+    );
+  if (fileTotals.removed !== 0)
+    detailsSummaryText.push(
+      `${fileTotals.removed} ${pluralize(
+        fileTotals.removed,
+        'file removed',
+        'files removed',
+      )}`,
+    );
 
   return `${commentHash}\n<sub>**[[filediff]](https://github.com/shopify/filediff)** The total bytes ${totalDiff.size.startsWith('+') ? 'added' : 'removed'} are:</sub>
   | uncompressed | gzip | brotli |
@@ -163,7 +173,7 @@ export const getStatComment = (
 
 
   <details${fileDetailsOpen ? ' open' : ''}>
-    <summary><sub>${fileTotals.changed !== 0 ? `${fileTotals.changed} ${fChangedText}` : ''}${fileTotals.added !== 0 ? `, ${fileTotals.added} ${fAddedText}` : ''}${fileTotals.removed !== 0 ? `, ${fileTotals.removed} ${fRemovedText}` : ''}</sub></summary>
+    <summary><sub>${detailsSummaryText.join(', ')}</sub></summary>
 
 | Filename | size  | gzip | brotli |
 |:--- | ---:| ---:| ---:|
