@@ -199,7 +199,7 @@ export const getStatComment = (
   <details${fileDetailsOpen ? ' open' : ''}>
     <summary><sub>${detailsSummaryText.join(', ')}</sub></summary>
 
-    ${commonFilePath ? `All changed files are in ${commonFilePath}` : ''}
+${commonFilePath ? `All changed files are in ${commonFilePath}` : ''}
 
 | Filename | size  | gzip | brotli |
 |:--- | ---:| ---:| ---:|
