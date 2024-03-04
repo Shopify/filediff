@@ -92,6 +92,22 @@ const getBranchStats = async (
   return branchStats;
 };
 
+const getCommonStringStart = (strings: string[]): string => {
+  if (strings.length < 2) return '';
+
+  const sortedStrings = strings.slice().sort();
+
+  // The first and last strings are the most different
+  const first = sortedStrings[0]!;
+  const last = sortedStrings[sortedStrings.length - 1]!;
+
+  for (let i = 0; i < first.length; i++) {
+    if (first[i] !== last[i]) return first.slice(0, i);
+  }
+
+  return first;
+};
+
 export const getStatComment = (
   targetStats: BranchStats,
   prStats: BranchStats,
@@ -110,6 +126,14 @@ export const getStatComment = (
     brotli: getDiff(prStats.totalBrotli, targetStats.totalBrotli),
   };
 
+  const allFilePaths = new Set([
+    ...Object.keys(prStats.files),
+    ...Object.keys(targetStats.files),
+  ]);
+
+  const commonStart = getCommonStringStart([...allFilePaths]);
+  const commonFilePath = commonStart.slice(0, commonStart.lastIndexOf('/') + 1);
+
   let fileColumns: string[] = [];
   Object.entries(prStats.files).forEach(([filePath, {size, brotli, gzip}]) => {
     const targetFile = targetStats.files[filePath];
@@ -118,13 +142,13 @@ export const getStatComment = (
       // File in PR is not in target branch (added)
       fileTotals.added = fileTotals.added + 1;
       fileColumns.push(
-        `| <sub>${filePath}</sub> | <sub>${prettyBytes(size)} \`${prettyBytes(size, {signed: true})}\`</sub> | <sub>${prettyBytes(gzip)} \`${prettyBytes(gzip, {signed: true})}\`</sub> | <sub>${prettyBytes(brotli)} \`${prettyBytes(brotli, {signed: true})}\`</sub> |`,
+        `| <sub>${filePath.slice(commonFilePath.length)}</sub> | <sub>${prettyBytes(size)} \`${prettyBytes(size, {signed: true})}\`</sub> | <sub>${prettyBytes(gzip)} \`${prettyBytes(gzip, {signed: true})}\`</sub> | <sub>${prettyBytes(brotli)} \`${prettyBytes(brotli, {signed: true})}\`</sub> |`,
       );
     } else if (size !== targetFile.size) {
       // File in PR is in target branch
       fileTotals.changed = fileTotals.changed + 1;
       fileColumns.push(
-        `| <sub>${filePath}</sub> | <sub>${prettyBytes(size)} \`${getDiff(size, targetFile.size)}\`</sub> | <sub>${prettyBytes(gzip)} \`${getDiff(gzip, targetFile.gzip)}\`</sub> | <sub>${prettyBytes(brotli)} \`${getDiff(brotli, targetFile.brotli)}\`</sub> |`,
+        `| <sub>${filePath.slice(commonFilePath.length)}</sub> | <sub>${prettyBytes(size)} \`${getDiff(size, targetFile.size)}\`</sub> | <sub>${prettyBytes(gzip)} \`${getDiff(gzip, targetFile.gzip)}\`</sub> | <sub>${prettyBytes(brotli)} \`${getDiff(brotli, targetFile.brotli)}\`</sub> |`,
       );
     }
   });
@@ -135,7 +159,7 @@ export const getStatComment = (
       if (prFile === undefined) {
         fileTotals.removed = fileTotals.removed + 1;
         fileColumns.push(
-          `| <sub>~${filePath}~</sub> | <sub>0 B \`${prettyBytes(-1 * size, {signed: true})}\`</sub> | <sub>0 B \`${prettyBytes(-1 * gzip, {signed: true})}\`</sub> | <sub>0 B \`${prettyBytes(-1 * brotli, {signed: true})}\`</sub> |`,
+          `| <sub>~${filePath.slice(commonFilePath.length)}~</sub> | <sub>0 B \`${prettyBytes(-1 * size, {signed: true})}\`</sub> | <sub>0 B \`${prettyBytes(-1 * gzip, {signed: true})}\`</sub> | <sub>0 B \`${prettyBytes(-1 * brotli, {signed: true})}\`</sub> |`,
         );
       }
     },
@@ -144,17 +168,27 @@ export const getStatComment = (
   const pluralize = (count: number, single: string, plural: string) =>
     count === 1 ? single : plural;
 
-  const fChangedText = pluralize(
-    fileTotals.changed,
-    'file changed',
-    'files changed',
-  );
-  const fAddedText = pluralize(fileTotals.added, 'file added', 'files added');
-  const fRemovedText = pluralize(
-    fileTotals.removed,
-    'file removed',
-    'files removed',
-  );
+  const detailsSummaryText = [];
+  if (fileTotals.changed !== 0)
+    detailsSummaryText.push(
+      `${fileTotals.changed} ${pluralize(
+        fileTotals.changed,
+        'file changed',
+        'files changed',
+      )}`,
+    );
+  if (fileTotals.added !== 0)
+    detailsSummaryText.push(
+      `${fileTotals.added} ${pluralize(fileTotals.added, 'file added', 'files added')}`,
+    );
+  if (fileTotals.removed !== 0)
+    detailsSummaryText.push(
+      `${fileTotals.removed} ${pluralize(
+        fileTotals.removed,
+        'file removed',
+        'files removed',
+      )}`,
+    );
 
   return `${commentHash}\n<sub>**[[filediff]](https://github.com/shopify/filediff)** The total bytes ${totalDiff.size.startsWith('+') ? 'added' : 'removed'} are:</sub>
   | uncompressed | gzip | brotli |
@@ -163,7 +197,9 @@ export const getStatComment = (
 
 
   <details${fileDetailsOpen ? ' open' : ''}>
-    <summary><sub>${fileTotals.changed !== 0 ? `${fileTotals.changed} ${fChangedText}` : ''}${fileTotals.added !== 0 ? `, ${fileTotals.added} ${fAddedText}` : ''}${fileTotals.removed !== 0 ? `, ${fileTotals.removed} ${fRemovedText}` : ''}</sub></summary>
+    <summary><sub>${detailsSummaryText.join(', ')}</sub></summary>
+
+${commonFilePath ? `<sub>All changed files are in ${commonFilePath}</sub>` : ''}
 
 | Filename | size  | gzip | brotli |
 |:--- | ---:| ---:| ---:|

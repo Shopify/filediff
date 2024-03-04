@@ -47,7 +47,7 @@ The branch to compare the directory glob against.
 
 **`dir_glob` (required)**
 
-The files to compare across branches.
+A comma seperated list of globs to compare across branches.
 
 **`pre_diff_script` (optional)**
 
@@ -63,10 +63,15 @@ Replaces previous filediff comments before creating a new one.
 
 ## Changelog
 
+**`v0.0.4`**
+
+- Only add commas when there are multiple strings in the summary details title
+- Eliminated common paths in filename output
+
 **`v0.0.3`**
 
 - Fix issue with comparison file path containing PR branch name
-- Added option for multiple globs seperated by `,`
+- Added option for multiple globs seperated by comma
 
 **`v0.0.2`**
 
