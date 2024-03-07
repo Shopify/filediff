@@ -63,6 +63,10 @@ Replaces previous filediff comments before creating a new one.
 
 ## Changelog
 
+**`v0.0.5`**
+
+- Use `--` to specify that it should check out a branch
+
 **`v0.0.4`**
 
 - Only add commas when there are multiple strings in the summary details title

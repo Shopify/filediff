@@ -62,7 +62,7 @@ const getBranchStats = async (
   const cwd = `../${tempDir}/${branch}`;
   await fs.promises.cp('.', cwd, {recursive: true});
   await exec('git', ['fetch', 'origin', branch], {cwd});
-  await exec('git', ['checkout', branch], {cwd});
+  await exec('git', ['checkout', '--', branch], {cwd});
 
   if (script) {
     info(`[${branch}] Running ${script}`);
