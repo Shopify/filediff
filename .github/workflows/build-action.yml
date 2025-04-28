@@ -14,12 +14,12 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 2
 
       - name: Setup Node with v20.11.0
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@3235b876344d2a9aa001b8d1453c930bba69e610 # v3.9.1
         with:
           node-version: 20.11.0
 
@@ -35,7 +35,7 @@ jobs:
           echo "message=$(git log -1 --pretty=%s)" >> $GITHUB_OUTPUT
           echo "author=$(git log -1 --pretty=\"%an <%ae>\")" >> $GITHUB_OUTPUT
 
-      - uses: stefanzweifel/git-auto-commit-action@v5
+      - uses: stefanzweifel/git-auto-commit-action@b863ae1933cb653a53c021fe36dbb774e1fb9403 # v5.2.0
         with:
           commit_author: ${{ steps.last-commit.outputs.author }}
           commit_message: ${{ steps.last-commit.outputs.message }}
