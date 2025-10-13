@@ -35,7 +35,7 @@ jobs:
           echo "message=$(git log -1 --pretty=%s)" >> $GITHUB_OUTPUT
           echo "author=$(git log -1 --pretty=\"%an <%ae>\")" >> $GITHUB_OUTPUT
 
-      - uses: stefanzweifel/git-auto-commit-action@b863ae1933cb653a53c021fe36dbb774e1fb9403 # v5.2.0
+      - uses: stefanzweifel/git-auto-commit-action@28e16e81777b558cc906c8750092100bbb34c5e3 # v7.0.0
         with:
           commit_author: ${{ steps.last-commit.outputs.author }}
           commit_message: ${{ steps.last-commit.outputs.message }}
