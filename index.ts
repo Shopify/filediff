@@ -56,7 +56,7 @@ const getBranchStats = async (
   branch: string,
   dirGlob: string,
   script?: string,
-): Promise<BranchStats> => {
+) => {
   info(`[${branch}] copy repo and git checkout `);
   const tempDir = '.filediff';
   const cwd = `../${tempDir}/${branch}`;
@@ -66,16 +66,23 @@ const getBranchStats = async (
 
   if (script) {
     info(`[${branch}] Running ${script}`);
-    const commands = script.split('&&').map((cmd) => cmd.trim());
-    for (const cmd of commands) {
-      const [cmdName, ...cmdArgs] = cmd.split(/\s+/);
-      await exec(cmdName!, cmdArgs, {cwd});
-    }
+    await exec('sh', ['-c', script], {cwd});
   }
 
   const files = await globby(dirGlob.split(','), {cwd, absolute: true});
 
   info(`[${branch}] Getting file stats for ${files.length} files`);
+
+  // Log first few file paths for debugging
+  if (files.length > 0) {
+    const sampleFiles = files
+      .slice(0, 3)
+      .map((f) => f.split(`${branch}/`).slice(1)[0]);
+    info(
+      `[${branch}] Sample files: ${sampleFiles.join(', ')}${files.length > 3 ? '...' : ''}`,
+    );
+  }
+
   const branchStats: BranchStats = {
     totalSize: 0,
     totalBrotli: 0,
@@ -234,10 +241,77 @@ const run = async () => {
       getBranchStats(prBranch, dirGlob, script),
     ]);
 
+    info('='.repeat(50));
+    info('Comparing branches:');
+    info(`  Target: ${targetBranch}`);
+    info(`    - Total size: ${prettyBytes(targetStats.totalSize)}`);
+    info(`    - Files: ${Object.keys(targetStats.files).length}`);
+    info(`  PR Branch: ${prBranch}`);
+    info(`    - Total size: ${prettyBytes(prStats.totalSize)}`);
+    info(`    - Files: ${Object.keys(prStats.files).length}`);
+    info('='.repeat(50));
+
+    // Check for file differences and log them
+    const allFilePaths = new Set([
+      ...Object.keys(prStats.files),
+      ...Object.keys(targetStats.files),
+    ]);
+
+    const fileChanges = {
+      added: [] as string[],
+      removed: [] as string[],
+      modified: [] as string[],
+    };
+
+    allFilePaths.forEach((filePath) => {
+      const prFile = prStats.files[filePath];
+      const targetFile = targetStats.files[filePath];
+
+      if (!targetFile) {
+        fileChanges.added.push(filePath);
+      } else if (!prFile) {
+        fileChanges.removed.push(filePath);
+      } else if (prFile.size !== targetFile.size) {
+        fileChanges.modified.push(filePath);
+      }
+    });
+
+    info(`File changes detected:`);
+    info(`  Added: ${fileChanges.added.length}`);
+    info(`  Removed: ${fileChanges.removed.length}`);
+    info(`  Modified: ${fileChanges.modified.length}`);
+
+    // Log sample of changes for debugging
+    if (fileChanges.added.length > 0) {
+      const sample = fileChanges.added.slice(0, 3);
+      info(
+        `  Sample added files: ${sample.join(', ')}${fileChanges.added.length > 3 ? '...' : ''}`,
+      );
+    }
+    if (fileChanges.removed.length > 0) {
+      const sample = fileChanges.removed.slice(0, 3);
+      info(
+        `  Sample removed files: ${sample.join(', ')}${fileChanges.removed.length > 3 ? '...' : ''}`,
+      );
+    }
+    if (fileChanges.modified.length > 0) {
+      const sample = fileChanges.modified.slice(0, 3);
+      info(
+        `  Sample modified files: ${sample.join(', ')}${fileChanges.modified.length > 3 ? '...' : ''}`,
+      );
+    }
+
     // No changes found, exit early
-    if (targetStats.totalSize === prStats.totalSize) return;
+    if (targetStats.totalSize === prStats.totalSize) {
+      info('No changes detected: Total sizes are identical between branches');
+      info('Action completed without posting a comment');
+      return;
+    }
+
+    info('Size difference detected, generating comment...');
 
     if (replaceComment === 'true') {
+      info('Checking for existing filediff comments to replace...');
       // Replace existing filediff comment
       const comments = await octokit.rest.issues.listComments({
         owner,
@@ -245,6 +319,7 @@ const run = async () => {
         issue_number: prNumber,
       });
 
+      let deletedCount = 0;
       for (let comment of comments.data) {
         if (comment.body?.startsWith(commentHash)) {
           await octokit.rest.issues.deleteComment({
@@ -252,7 +327,14 @@ const run = async () => {
             repo,
             comment_id: comment.id,
           });
+          deletedCount++;
         }
+      }
+
+      if (deletedCount > 0) {
+        info(`Deleted ${deletedCount} existing filediff comment(s)`);
+      } else {
+        info('No existing filediff comments found');
       }
     }
 
@@ -268,6 +350,8 @@ const run = async () => {
       issue_number: prNumber,
       body: commentBody,
     });
+
+    info('Comment posted successfully to PR');
   } catch (error) {
     setFailed(
       error instanceof Error ? error.message : 'An unexpected error occurred',

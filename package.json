@@ -13,17 +13,18 @@
     "format": "prettier '.' !dist/index.js --write"
   },
   "dependencies": {
-    "@actions/core": "1.10.0",
+    "@actions/core": "1.11.1",
     "@actions/exec": "^1.1.1",
-    "@actions/github": "^6.0.0",
-    "globby": "^14.0.1",
-    "pretty-bytes": "^6.1.1"
+    "@actions/github": "^6.0.1",
+    "globby": "^15.0.0",
+    "pretty-bytes": "^7.1.0"
   },
   "devDependencies": {
-    "@types/glob": "^8.1.0",
-    "@vercel/ncc": "^0.38.1",
-    "prettier": "^3.1.0",
-    "typescript": "^5.3.3"
+    "@types/glob": "^9.0.0",
+    "@types/node": "^22.0.0",
+    "@vercel/ncc": "^0.38.4",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3"
   },
   "prettier": {
     "singleQuote": true,
